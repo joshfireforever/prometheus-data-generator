@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 
+#I cloned this from https://github.com/little-angry-clouds/prometheus-data-generator
+
 import time
 import random
 import threading
 import logging
+import backfill
 from os import _exit, environ
 import yaml
+import scipy.stats as stats
 from flask import Flask, Response
 from prometheus_client import Gauge, Counter, Summary, Histogram
 from prometheus_client import generate_latest, CollectorRegistry
+import datetime
+from datetime import datetime
 
+live_mode = True
+times_of_day = []
 
 if "PDG_LOG_LEVEL" in environ:
     supported_log_levels = ["INFO", "ERROR", "DEBUG"]
@@ -65,6 +73,16 @@ class PrometheusDataGenerator:
         self.threads = []
         self.registry = CollectorRegistry()
         self.data = read_configuration()
+
+        live_mode = self.data["live_mode"]
+
+        if live_mode:
+            logger.info("LIVE MODE IS ENABLED")
+        else:
+            logger.info("LIVE MODE IS DISABLED, EXITING.")
+            quit()
+
+
         for metric in self.data["config"]:
             if "labels" in metric:
                 labels = metric["labels"]
@@ -106,7 +124,7 @@ class PrometheusDataGenerator:
 
             t = threading.Thread(
                 target=self.update_metrics,
-                args=(instrument, metric)
+                args=(instrument, metric),
             )
             t.start()
             self.threads.append(t)
@@ -117,7 +135,8 @@ class PrometheusDataGenerator:
 
         Arguments:
         metric_object: a Prometheus initialized object. It can be a Gauge,
-          Counter, Histogram or Summary.
+          Counter, Histogram or Summary. For this program we only us Gauge as 
+          this is the only type that allows for direct setting.
         metric_metadata: the configuration related to the initialzed Prometheus
           object. It comes from the config.yml.
         """
@@ -125,6 +144,7 @@ class PrometheusDataGenerator:
         while True:
             if self.stopped:
                 break
+
             for sequence in metric_metadata["sequence"]:
                 if self.stopped:
                     break
@@ -162,62 +182,33 @@ class PrometheusDataGenerator:
                     if time.time() > timeout:
                         break
 
-                    if "value" in sequence:
-                        value = sequence["value"]
-                        if isinstance(value, float):
-                            value = float(value)
-                        else:
-                            value = int(value)
+                    stddev = sequence["standard_deviation"]
+                    error_rate = sequence["error_rate"]
+                    missing_data_rate = sequence["missing_data_rate"]
 
-                    elif "values" in sequence:
-                        if "." in sequence["values"].split("-")[0]:
-                            initial_value = float(sequence["values"].split("-")[0])
-                            end_value = float(sequence["values"].split("-")[1])
-                            value = random.uniform(initial_value, end_value)
-                        else:
-                            initial_value = int(sequence["values"].split("-")[0])
-                            end_value = int(sequence["values"].split("-")[1])
-                            value = random.randrange(initial_value, end_value)
+                    #Generate valid value within specs
+                    med = sequence["median"]
+                    mmin = sequence["minimum"]
+                    mmax = sequence["maximum"]
+                    dist = stats.truncnorm((mmin - med) / stddev, (mmax - med) / stddev, loc=med, scale=stddev)
+                    value = dist.rvs(1)[0]
+                    #insert bad data
+                    bad_instances = int(error_rate*100)
+                    valid_instances = 100 - bad_instances
+                    bad_data_bool = valid_instances * [False] + bad_instances * [True]
+                    random.shuffle(bad_data_bool)
+                    if (bad_data_bool[0]):
+                        value = random.uniform(mmin, mmax)
+                    #insert missing data
+                    missing_instances = int(missing_data_rate*100)
+                    valid_instances = 100 - missing_instances
+                    missing_data_bool = valid_instances * [False] + missing_instances * [True]
+                    random.shuffle(missing_data_bool)
+                    if (missing_data_bool[0]):
+                        value = -1 #-1 value is our representation of missing data
+                    
+                    metric_object.set(value)
 
-                    if metric_metadata["type"].lower() == "gauge":
-                        try:
-                            operation = sequence["operation"].lower()
-                        except:
-                            logger.error(
-                                "You must set an operation when using Gauge"
-                            )
-                            _exit(1)
-                        if operation == "inc":
-                            if labels == []:
-                                metric_object.inc(value)
-                            else:
-                                metric_object.labels(*labels).inc(value)
-                        elif operation == "dec":
-                            if labels == []:
-                                metric_object.dec(value)
-                            else:
-                                metric_object.labels(*labels).dec(value)
-                        elif operation == "set":
-                            if labels == []:
-                                metric_object.set(value)
-                            else:
-                                metric_object.labels(*labels).set(value)
-
-                    elif metric_metadata["type"].lower() == "counter":
-                        if labels == []:
-                            metric_object.inc(value)
-                        else:
-                            metric_object.labels(*labels).inc(value)
-                    elif metric_metadata["type"].lower() == "summary":
-                        if labels == []:
-                            metric_object.observe(value)
-                        else:
-                            metric_object.labels(*labels).observe(value)
-                    elif metric_metadata["type"].lower() == "histogram":
-                        if labels == []:
-                            metric_object.observe(value)
-                        else:
-                            metric_object.labels(*labels).observe(value)
                     time.sleep(interval)
 
     def serve_metrics(self):
@@ -240,6 +231,7 @@ class PrometheusDataGenerator:
             called it will recollect the metrics and generate the rendering.
             """
             metrics = generate_latest(self.registry)
+            
             return Response(metrics,
                             mimetype="text/plain",
                             content_type="text/plain; charset=utf-8")

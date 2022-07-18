@@ -1,4 +1,6 @@
-Flask==1.1.2
+Flask==2.1.0
 prometheus-client==0.8.0
 PyYAML==5.4
-
+Jinja2==3.0.3
+scipy
+pendulum

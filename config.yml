@@ -1,39 +1,49 @@
+#0 for standard_deviation creates a Boolean value.
 ---
 config:
-  - name: number_of_fruits
-    description: The number of fruits we have.
+  - name: Total_Runtime
+    description: The amount of runtime each forecast takes, in minutes.
     type: gauge
-    labels: [name, color]
     sequence:
-      - time: 5
-        values: 0-20
-        operation: inc
-        labels:
-          name: apple
-          color: red
-      - eval_time: 5
-        operation: set
-        labels:
-          name: apple
-          color: red
-      - time: 5
-        eval_time: 1
-        values: 0-20
-        operation: inc
-        labels:
-          name: apple
-          color: green
-      - time: 5
-        eval_time: 1
-        values: 0-5
-        operation: dec
-        labels:
-          name: apple
-          color: green
-      - time: 5
-        eval_time: 1
-        value: 3
-        operation: inc
-        labels:
-          name: apple
-          color: yellow
+      - eval_time: 1
+        interval: 5
+        error_rate: 0.03
+        missing_data_rate: 0.1
+        median: 60
+        standard_deviation: 7.5
+        minimum: 0
+        maximum: 120
+        backfill_range_hours: 720
+        backfill_interval_hours: 6
+        backfill_starting_hour: 0
+  - name: I_O_Fraction
+    description: The ratio of time spent in input to time spent in output.
+    type: gauge
+    sequence:
+      - eval_time: 1
+        interval: 5
+        error_rate: 0.03
+        missing_data_rate: 0.1
+        median: 10
+        standard_deviation: 3
+        minimum: 0
+        maximum: 100
+        backfill_range_hours: 720
+        backfill_interval_hours: 6
+        backfill_starting_hour: 0
+  - name: Initial_RMS_pressure_tendency
+    description: The initial RMS pressure tendency.
+    type: gauge
+    sequence:
+      - eval_time: 1
+        interval: 5
+        error_rate: 0.03
+        missing_data_rate: 0.1
+        median: 0.8
+        standard_deviation: 0.03
+        minimum: 0
+        maximum: 2
+        backfill_range_hours: 720
+        backfill_interval_hours: 6
+        backfill_starting_hour: 0
+live_mode: True

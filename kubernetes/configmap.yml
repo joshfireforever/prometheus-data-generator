@@ -7,40 +7,36 @@ data:
   config.yml: |
     ---
     config:
-      - name: number_of_fruits
-        description: The number of fruits we have.
+      - name: total_runtime_minutes
+        description: The amount of runtime each forecast takes, in minutes.
         type: gauge
-        labels: [name, color]
         sequence:
-          - time: 5
-            values: 0-20
-            operation: inc
-            labels:
-              name: apple
-              color: red
-          - eval_time: 5
-            operation: set
-            labels:
-              name: apple
-              color: red
-          - time: 5
-            eval_time: 1
-            values: 0-20
-            operation: inc
-            labels:
-              name: apple
-              color: green
-          - time: 5
-            eval_time: 1
-            values: 0-5
-            operation: dec
-            labels:
-              name: apple
-              color: green
-          - time: 5
-            eval_time: 1
-            value: 3
-            operation: inc
-            labels:
-              name: apple
-              color: yellow
+          - eval_time: 1
+            interval: 6
+            median: 60
+            standard_deviation: 7.5
+            minimum: 0
+            maximum: 120
+            type: histogram
+      - name: I_O_Fraction_percent
+        description: The ratio of time spent in input to time spent in output.
+        type: gauge
+        sequence:
+          - eval_time: 1
+            interval: 6
+            median: 10
+            standard_deviation: 3
+            minimum: 0
+            maximum: 100
+            type: histogram
+      - name: Initial_RMS_pressure_tendency
+        description: The amount of runtime each forecast takes, in hours.
+        type: gauge
+        sequence:
+          - eval_time: 1
+            interval: 6
+            median: 0.8
+            standard_deviation: 0.1
+            minimum: 0
+            maximum: 2
+            type: histogram

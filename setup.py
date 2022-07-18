@@ -9,5 +9,5 @@ setup(
     version=VERSION,
     description='',
     license="GPLv3",
-    install_requires=["flask", "prometheus_client", "pyyaml"],
+    install_requires=["flask", "prometheus_client", "pyyaml", "scipy"],
 )
