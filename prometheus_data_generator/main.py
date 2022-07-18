@@ -183,7 +183,7 @@ class PrometheusDataGenerator:
                         break
 
                     stddev = sequence["standard_deviation"]
-                    error_rate = sequence["error_rate"]
+                    bad_data_rate = sequence["bad_data_rate"]
                     missing_data_rate = sequence["missing_data_rate"]
 
                     #Generate valid value within specs
@@ -193,7 +193,7 @@ class PrometheusDataGenerator:
                     dist = stats.truncnorm((mmin - med) / stddev, (mmax - med) / stddev, loc=med, scale=stddev)
                     value = dist.rvs(1)[0]
                     #insert bad data
-                    bad_instances = int(error_rate*100)
+                    bad_instances = int(bad_data_rate*100)
                     valid_instances = 100 - bad_instances
                     bad_data_bool = valid_instances * [False] + bad_instances * [True]
                     random.shuffle(bad_data_bool)
