@@ -198,7 +198,7 @@ class PrometheusDataGenerator:
                     bad_data_bool = valid_instances * [False] + bad_instances * [True]
                     random.shuffle(bad_data_bool)
                     if (bad_data_bool[0]):
-                        value = random.uniform(mmin, mmax)
+                        value = random.uniform(med-(stddev*3), med+(stddev*3))
                     #insert missing data
                     missing_instances = int(missing_data_rate*100)
                     valid_instances = 100 - missing_instances
