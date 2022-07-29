@@ -1,4 +1,3 @@
-#0 for standard_deviation creates a Boolean value.
 ---
 config:
   - name: Total_Runtime
