@@ -75,4 +75,4 @@ Run these commands one at a time in command-line in a different window than the 
 - backfill_starting_hour - controls which hour of the day each backfilled metric initiates on.
 - You can add in new metrics, but keep in mind that you will need to manually add a new panel to the Grafana dashboard for each.
 - After making any changes to config.yml, to get them to apply to live data you will need to run these command line commands from the FSMD folder:
-> docker cp config.yml prometheus-data-generator:/home/appuser && > docker restart prometheus-data-generator
+> docker cp config.yml prometheus-data-generator:/home/appuser && docker restart prometheus-data-generator
