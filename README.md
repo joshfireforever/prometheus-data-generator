@@ -15,7 +15,38 @@ In addition, an entirely new file, backfill.py, was coded and added to this prog
 
 - Whenever stopping this project, it’s recommended that you control+C multiple times in the command-line window that you initiated docker-compose from, to force all threads to stop, if Live mode is set to True in the config file. This is because the data generator threads sleep on an interval while waiting for the next simulated forecast. If you get stuck with getting the docker project to stop because of these threads, see https://typeofnan.dev/how-to-stop-all-docker-containers.
 
-## Backfill data generation 
+## Setting the configuration
+
+FSMD/config.yml overwrite the duplicated default config file that is present in the prometheus-data-generator Docker image. This controls the generation of both backfilled and live metrics.
+
+### Overall Parameters
+
+- In config.yml, each “- name:” field denotes a metric with description and metric type. The metric type is always set to gauge because of the weird way the source code was designed.
+- There can be multiple sequences for each metric that will generate data with multiple parameters. However, we just have a single sequence per metric for simplicity.
+- bad_data_rate - the percentage value as decimal (0.0-1.0) at which bad data (within 2 ) is generated for regular metric.
+- median, standard_deviation, minimum, maximum - used in a formula to generate both backfilled and live metric data. The min and max control the range that the randomly generated values can fall in.
+
+- You can add in new metrics, but keep in mind that you will need to manually add a new panel to the Grafana dashboard for each.
+- After making any changes to config.yml, to get them to apply to live data you will need to run these command lines from the FSMD folder:
+> docker cp config.yml prometheus-data-generator:/home/appuser && docker restart prometheus-data-generator
+
+
+### Live Data Parameters
+
+- live_mode - can be set to True or False in the config file. If set to False, then after generating backfill data the program and the container will quit. You can restart the container from Docker to instantly create new backfill data, if backill_mode is enabled.
+- eval_time -  is how long each sequence runs, which we have set to once second for now as we intend for a single value for each forecast.
+- interval - number of seconds between each live data generation (a.k.a. a new forecast).
+  - By default this is set to 5 seconds to prevent the threads from sleeping forever, and allow for easier testing in Grafana and stopping of the containers/project in Docker. This causes new live metrics to be generated every 5 seconds, which is much less than the specified 6 hours but is much more interesting for testing and Grafana design purposes.
+- To change this value to represent the actual 6 hour interval between forecasts, change this interval value to 21600 (seconds). Or set it to whatever you like for your testing purposes. This is completely up to preference right now because this will cause the actual threads to sleep for the exact time set. If you get stuck with getting the docker project to stop because of these threads, see https://typeofnan.dev/how-to-stop-all-docker-containers
+
+### Backfilled Data Parameters
+
+- backfill_range_hours - controls how many hours back each backfilled data metric goes.
+- backfill_interval_hours - controls the amount of time between each backfilled metric.
+- backfill_starting_hour - controls which hour of the day each backfilled metric initiates on.
+
+## Backfill data generation
+
 The prometheus-data-generator container and program creates backfilled data at runtime automatically.
 - If you wanted to recreate the backfill.txt file, such as after changing config.yml, then run this command:
 docker exec -it prometheus-data-generator bash -c "python /home/appuser/prometheus_data_generator/backfill.py"
@@ -54,33 +85,3 @@ Run these commands one at a time in command-line in a different window than the 
 ## Grafana
 - An initial provisioned Grafana dashboard should already be loaded in at http://localhost:3000/dashboards. You should be able to immediately see backfill data from prometheus coming in over the intervals set in config.yml, as well as new live data coming in from prometheus-data-generator.
 - If you make a change to this, the change won’t be saveable to this provisioned dashboard as Grafana forces it to be read-only. However, you can save a copy. If you wish, you can export this and replace FSMD.json in the FSMD root folder, which is where the initial dashboard is provisioned from if you recreate the Grafana container through docker compose.
-
-## Tweaking the metrics
-
-FSMD/config.yml overwrite the duplicated default config file that is present in the prometheus-data-generator Docker image. This controls the generation of both backfilled and live metrics.
-
-### Overall Parameters
-
-- In config.yml, each “- name:” field denotes a metric with description and metric type. The metric type is always set to gauge because of the weird way the source code was designed.
-- There can be multiple sequences for each metric that will generate data with multiple parameters. However, we just have a single sequence per metric for simplicity.
-- bad_data_rate - the percentage value as decimal (0.0-1.0) at which bad data (within 2 ) is generated for regular metric.
-- median, standard_deviation, minimum, maximum - used in a formula to generate both backfilled and live metric data. The min and max control the range that the randomly generated values can fall in.
-
-- You can add in new metrics, but keep in mind that you will need to manually add a new panel to the Grafana dashboard for each.
-- After making any changes to config.yml, to get them to apply to live data you will need to run these command lines from the FSMD folder:
-> docker cp config.yml prometheus-data-generator:/home/appuser && docker restart prometheus-data-generator
-
-
-### Live Data Parameters
-
-- live_mode - can be set to True or False in the config file. If set to False, then after generating backfill data the program and the container will quit. You can restart the container from Docker to instantly create new backfill data, if backill_mode is enabled.
-- eval_time -  is how long each sequence runs, which we have set to once second for now as we intend for a single value for each forecast.
-- interval - number of seconds between each live data generation (a.k.a. a new forecast).
-  - By default this is set to 5 seconds to prevent the threads from sleeping forever, and allow for easier testing in Grafana and stopping of the containers/project in Docker. This causes new live metrics to be generated every 5 seconds, which is much less than the specified 6 hours but is much more interesting for testing and Grafana design purposes.
-- To change this value to represent the actual 6 hour interval between forecasts, change this interval value to 21600 (seconds). Or set it to whatever you like for your testing purposes. This is completely up to preference right now because this will cause the actual threads to sleep for the exact time set. If you get stuck with getting the docker project to stop because of these threads, see https://typeofnan.dev/how-to-stop-all-docker-containers
-
-### Backfilled Data Parameters
-
-- backfill_range_hours - controls how many hours back each backfilled data metric goes.
-- backfill_interval_hours - controls the amount of time between each backfilled metric.
-- backfill_starting_hour - controls which hour of the day each backfilled metric initiates on.
